@@ -2,18 +2,23 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/alphaloan/vehicle/datastore"
 )
 
 type LoanCustomerHandler struct {
-	CustomerStore datastore.LoanCustomerStore
+	CustomerStore   datastore.LoanCustomerStore
+	SubmissionStore datastore.LoanSubmissionStore
 }
 
-func NewLoanCustomerHandler(customerStore datastore.LoanCustomerStore) *LoanCustomerHandler {
+func NewLoanCustomerHandler(
+	customerStore datastore.LoanCustomerStore,
+	submissionStore datastore.LoanSubmissionStore) *LoanCustomerHandler {
 	return &LoanCustomerHandler{
-		CustomerStore: customerStore,
+		CustomerStore:   customerStore,
+		SubmissionStore: submissionStore,
 	}
 }
 
@@ -60,4 +65,71 @@ func (h *LoanCustomerHandler) HandleGetAllLoanSubmission(w http.ResponseWriter, 
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(responseBody)
+}
+
+func (h *LoanCustomerHandler) HandleGetCustomerAndSubmissionById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET method allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	customerID := r.PathValue("customerID")
+	if !IsValidUUID(customerID) {
+		errMsg := "Invalid customer ID: " + customerID
+		responseBodyErr := GetAllLoanCustomersResponse{
+			ErrorMessage: &errMsg,
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responseBodyErr)
+		return
+	}
+
+	loadCustomerRow, err := h.CustomerStore.GetCustomerByCustomerId(customerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get Customer with CustomerId: %s", customerID), http.StatusInternalServerError)
+		return
+	}
+
+	loanCustomer := LoanCustomer{
+		CustomerID:    loadCustomerRow.CustomerID,
+		IDCardNumber:  loadCustomerRow.IDCardNumber,
+		FullName:      loadCustomerRow.FullName,
+		BirthDate:     loadCustomerRow.BirthDate,
+		PhoneNumber:   loadCustomerRow.PhoneNumber,
+		MonthlyIncome: loadCustomerRow.MonthlyIncome,
+		AddressStreet: loadCustomerRow.AddressStreet,
+		AddressCity:   loadCustomerRow.AddressCity,
+	}
+	if loadCustomerRow.Email.Valid {
+		loanCustomer.Email = &loadCustomerRow.Email.String
+	}
+	customerAndSubmissions := CustomerAndSubmissions{
+		Customer: &loanCustomer,
+	}
+	loadSubmissionsRows, err := h.SubmissionStore.GetLoanSubmissionCustomerId(customerID)
+	if err != nil {
+		fmt.Sprintf("Failed to get Loan Submission Customer with CustomerId: %s", customerID)
+	}
+
+	loadSubmissions := make([]LoanSubmission, 0, len(loadSubmissionsRows))
+	fmt.Sprintf("Size %s", len(loadSubmissionsRows))
+	for _, row := range loadSubmissionsRows {
+		loadSubmissions = append(loadSubmissions, LoanSubmission{
+			SubmissionID:            row.SubmissionID,
+			VehicleType:             row.VehicleType,
+			VehicleBrand:            row.VehicleBrand,
+			VehicleModel:            row.VehicleModel,
+			VehicleLicenseNumber:    row.VehicleLicenseNumber,
+			VehicleOdometer:         row.VehicleOdometer,
+			ManufacturingYear:       row.ManufacturingYear,
+			ProposedLoanAmount:      row.ProposedLoanAmount,
+			ProposedLoanTenureMonth: row.ProposedLoanTenure,
+			IsCommercialVehicle:     row.IsCommercialVehicle,
+		})
+	}
+	customerAndSubmissions.Submissions = &loadSubmissions
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(customerAndSubmissions)
 }

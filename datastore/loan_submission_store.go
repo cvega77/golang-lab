@@ -1,6 +1,8 @@
 package datastore
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 const sqlUpsertSubmission = `
     INSERT INTO loan_submissions (
@@ -49,6 +51,7 @@ SELECT
 FROM loan_submissions
 ORDER BY created_at DESC;
 `
+
 const sqlGetLoanSubmissionById = `
 SELECT
 	submission_id, vehicle_type,
@@ -58,6 +61,16 @@ SELECT
 	proposed_loan_tenure_month, is_commercial_vehicle
 FROM loan_submissions
 WHERE submission_id = $1;`
+
+const sqlGetLoanSubmissionByCustomerId = `
+SELECT
+	submission_id, vehicle_type,
+	vehicle_brand, vehicle_model,
+	vehicle_license_number, vehicle_odometer,
+	manufacturing_year, proposed_loan_amount,
+	proposed_loan_tenure_month, is_commercial_vehicle
+FROM loan_submissions
+WHERE customer_id = $1;`
 
 type LoanSubmissionRow struct {
 	SubmissionID         string
@@ -171,4 +184,37 @@ func (s *LoanSubmissionStore) GetLoanSubmissionById(id string) (*LoanSubmissionR
 		return nil, err
 	}
 	return submission, nil
+}
+
+func (s *LoanSubmissionStore) GetLoanSubmissionCustomerId(id string) ([]*LoanSubmissionRow, error) {
+	rows, err := s.db.Query(sqlGetLoanSubmissionByCustomerId, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var submissions []*LoanSubmissionRow
+	for rows.Next() {
+		submission := &LoanSubmissionRow{}
+		err := rows.Scan(
+			&submission.SubmissionID,
+			&submission.VehicleType,
+			&submission.VehicleBrand,
+			&submission.VehicleModel,
+			&submission.VehicleLicenseNumber,
+			&submission.VehicleOdometer,
+			&submission.ManufacturingYear,
+			&submission.ProposedLoanAmount,
+			&submission.ProposedLoanTenure,
+			&submission.IsCommercialVehicle,
+		)
+		if err != nil {
+			return nil, err
+		}
+		submissions = append(submissions, submission)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return submissions, nil
 }

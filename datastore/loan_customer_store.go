@@ -41,6 +41,20 @@ SELECT
 	address_city
 FROM loan_customers;`
 
+const sqlGetCustomerByCustomerId = `
+SELECT
+    customer_id,
+	id_card_number,
+	full_name,
+	birth_date,
+	phone_number,
+	email,
+	monthly_income,
+	address_street,
+	address_city
+FROM loan_customers
+WHERE customer_id = $1;`
+
 type LoanCustomerRow struct {
 	CustomerID    string
 	IDCardNumber  string
@@ -114,4 +128,24 @@ func (s *LoanCustomerStore) GetAllLoanCustomers() ([]*LoanCustomerRow, error) {
 		return nil, err
 	}
 	return customers, nil
+}
+
+func (s *LoanCustomerStore) GetCustomerByCustomerId(id string) (*LoanCustomerRow, error) {
+	customer := &LoanCustomerRow{}
+
+	err := s.db.QueryRow(sqlGetCustomerByCustomerId, id).Scan(
+		&customer.CustomerID,
+		&customer.IDCardNumber,
+		&customer.FullName,
+		&customer.BirthDate,
+		&customer.PhoneNumber,
+		&customer.Email,
+		&customer.MonthlyIncome,
+		&customer.AddressStreet,
+		&customer.AddressCity,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return customer, nil
 }

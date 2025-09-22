@@ -58,6 +58,16 @@ type GetAllLoanCustomersResponse struct {
 	Data         *[]LoanCustomer `json:"data"`
 }
 
+type CustomerAndSubmissions struct {
+	Customer    *LoanCustomer     `json:"customer"`
+	Submissions *[]LoanSubmission `json:"loan_submissions"`
+}
+
+type GetLoanCustomerByIdResponse struct {
+	ErrorMessage *string                 `json:"error_message"`
+	Data         *CustomerAndSubmissions `json:"data"`
+}
+
 func convertLoanCustomer(loanCustomer *LoanCustomer) *datastore.LoanCustomerRow {
 	if loanCustomer == nil {
 		return nil

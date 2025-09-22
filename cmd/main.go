@@ -29,12 +29,13 @@ func main() {
 
 	loanSubmitHandler := handler.NewLoanSubmitHandler(*loanCustomerStore, *loanSubmissionStore)
 	loanSubmissionHandler := handler.NewLoanSubmissionHandler(*loanSubmissionStore)
-	loanCustomerHandler := handler.NewLoanCustomerHandler(*loanCustomerStore)
+	loanCustomerHandler := handler.NewLoanCustomerHandler(*loanCustomerStore, *loanSubmissionStore)
 
 	http.HandleFunc("/api/loan/submit", loanSubmitHandler.HandleSubmitLoan)
 	http.HandleFunc("/api/loan/submissions", loanSubmissionHandler.HandleGetAllLoanSubmission)
 	http.HandleFunc("/api/loan/submission/tracks", loanSubmissionHandler.HandleSubmissionLoanById)
 	http.HandleFunc("/api/loan/customers", loanCustomerHandler.HandleGetAllLoanSubmission)
+	http.HandleFunc("/api/loan/customers/{customerID}/info", loanCustomerHandler.HandleGetCustomerAndSubmissionById)
 
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
