@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 const sqlUpsertCustomer = `
@@ -42,18 +43,32 @@ SELECT
 FROM loan_customers;`
 
 const sqlGetCustomerByCustomerId = `
-SELECT
-    customer_id,
-	id_card_number,
-	full_name,
-	birth_date,
-	phone_number,
-	email,
-	monthly_income,
-	address_street,
-	address_city
-FROM loan_customers
-WHERE customer_id = $1;`
+select
+    customer.customer_id,
+    customer.id_card_number,
+    customer.full_name,
+    customer.birth_date,
+    customer.phone_number,
+    customer.email,
+    customer.monthly_income,
+    customer.address_street, 
+    customer.address_city,
+    submission.submission_id,
+    submission.vehicle_type,
+    submission.vehicle_brand,
+    submission.vehicle_model,
+    submission.vehicle_license_number,
+    submission.vehicle_odometer,
+    submission.manufacturing_year,
+    submission.proposed_loan_amount,
+    submission.proposed_loan_tenure_month,
+    submission.is_commercial_vehicle,
+    submission.created_at,
+    submission.updated_at
+from loan_customers customer
+inner join loan_submissions submission
+on customer.customer_id = submission.customer_id
+where customer.customer_id = $1`
 
 type LoanCustomerRow struct {
 	CustomerID    string
@@ -65,6 +80,11 @@ type LoanCustomerRow struct {
 	MonthlyIncome float64
 	AddressStreet string
 	AddressCity   string
+}
+
+type LoanCustomerWithAllSubmissionsRow struct {
+	LoanCustomerRow *LoanCustomerRow
+	LoanSubmissions []*LoanSubmissionRow
 }
 
 type LoanCustomerStore struct {
@@ -130,22 +150,87 @@ func (s *LoanCustomerStore) GetAllLoanCustomers() ([]*LoanCustomerRow, error) {
 	return customers, nil
 }
 
-func (s *LoanCustomerStore) GetCustomerByCustomerId(id string) (*LoanCustomerRow, error) {
-	customer := &LoanCustomerRow{}
-
-	err := s.db.QueryRow(sqlGetCustomerByCustomerId, id).Scan(
-		&customer.CustomerID,
-		&customer.IDCardNumber,
-		&customer.FullName,
-		&customer.BirthDate,
-		&customer.PhoneNumber,
-		&customer.Email,
-		&customer.MonthlyIncome,
-		&customer.AddressStreet,
-		&customer.AddressCity,
-	)
+func (s *LoanCustomerStore) GetCustomerByCustomerId(id string) (*LoanCustomerWithAllSubmissionsRow, error) {
+	rows, err := s.db.Query(sqlGetCustomerByCustomerId, id)
 	if err != nil {
 		return nil, err
 	}
-	return customer, nil
+	defer rows.Close()
+
+	var customer *LoanCustomerRow
+	var submissions []*LoanSubmissionRow
+
+	for rows.Next() {
+		submission := &LoanSubmissionRow{}
+		if customer == nil {
+			customer = &LoanCustomerRow{}
+			err = rows.Scan(
+				&customer.CustomerID,
+				&customer.IDCardNumber,
+				&customer.FullName,
+				&customer.BirthDate,
+				&customer.PhoneNumber,
+				&customer.Email,
+				&customer.MonthlyIncome,
+				&customer.AddressStreet,
+				&customer.AddressCity,
+				&submission.SubmissionID,
+				&submission.VehicleType,
+				&submission.VehicleBrand,
+				&submission.VehicleModel,
+				&submission.VehicleLicenseNumber,
+				&submission.VehicleOdometer,
+				&submission.ManufacturingYear,
+				&submission.ProposedLoanAmount,
+				&submission.ProposedLoanTenure,
+				&submission.IsCommercialVehicle,
+				&submission.CreatedAt,
+				&submission.UpdatedAt,
+			)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = rows.Scan(
+				new(string),
+				new(string),
+				new(string),
+				new(string),
+				new(string),
+				new(sql.NullString),
+				new(float64),
+				new(string),
+				new(string),
+				&submission.SubmissionID,
+				&submission.VehicleType,
+				&submission.VehicleBrand,
+				&submission.VehicleModel,
+				&submission.VehicleLicenseNumber,
+				&submission.VehicleOdometer,
+				&submission.ManufacturingYear,
+				&submission.ProposedLoanAmount,
+				&submission.ProposedLoanTenure,
+				&submission.IsCommercialVehicle,
+				&submission.CreatedAt,
+				&submission.UpdatedAt,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		submissions = append(submissions, submission)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if customer == nil {
+		return nil, fmt.Errorf("customer with id %s not found", id)
+	}
+
+	return &LoanCustomerWithAllSubmissionsRow{
+		LoanCustomerRow: customer,
+		LoanSubmissions: submissions,
+	}, nil
 }

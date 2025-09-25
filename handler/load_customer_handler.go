@@ -84,36 +84,35 @@ func (h *LoanCustomerHandler) HandleGetCustomerAndSubmissionById(w http.Response
 		return
 	}
 
-	loadCustomerRow, err := h.CustomerStore.GetCustomerByCustomerId(customerID)
+	loanCustomerWithAllSubmissionsRow, err := h.CustomerStore.GetCustomerByCustomerId(customerID)
 	if err != nil {
+		fmt.Println(err)
 		http.Error(w, fmt.Sprintf("Failed to get Customer with CustomerId: %s", customerID), http.StatusInternalServerError)
 		return
 	}
 
 	loanCustomer := LoanCustomer{
-		CustomerID:    loadCustomerRow.CustomerID,
-		IDCardNumber:  loadCustomerRow.IDCardNumber,
-		FullName:      loadCustomerRow.FullName,
-		BirthDate:     loadCustomerRow.BirthDate,
-		PhoneNumber:   loadCustomerRow.PhoneNumber,
-		MonthlyIncome: loadCustomerRow.MonthlyIncome,
-		AddressStreet: loadCustomerRow.AddressStreet,
-		AddressCity:   loadCustomerRow.AddressCity,
+		CustomerID:    loanCustomerWithAllSubmissionsRow.LoanCustomerRow.CustomerID,
+		IDCardNumber:  loanCustomerWithAllSubmissionsRow.LoanCustomerRow.IDCardNumber,
+		FullName:      loanCustomerWithAllSubmissionsRow.LoanCustomerRow.FullName,
+		BirthDate:     loanCustomerWithAllSubmissionsRow.LoanCustomerRow.BirthDate,
+		PhoneNumber:   loanCustomerWithAllSubmissionsRow.LoanCustomerRow.PhoneNumber,
+		MonthlyIncome: loanCustomerWithAllSubmissionsRow.LoanCustomerRow.MonthlyIncome,
+		AddressStreet: loanCustomerWithAllSubmissionsRow.LoanCustomerRow.AddressStreet,
+		AddressCity:   loanCustomerWithAllSubmissionsRow.LoanCustomerRow.AddressCity,
 	}
-	if loadCustomerRow.Email.Valid {
-		loanCustomer.Email = &loadCustomerRow.Email.String
+	if loanCustomerWithAllSubmissionsRow.LoanCustomerRow.Email.Valid {
+		loanCustomer.Email = &loanCustomerWithAllSubmissionsRow.LoanCustomerRow.Email.String
 	}
 	customerAndSubmissions := CustomerAndSubmissions{
 		Customer: &loanCustomer,
 	}
-	loadSubmissionsRows, err := h.SubmissionStore.GetLoanSubmissionCustomerId(customerID)
 	if err != nil {
 		fmt.Sprintf("Failed to get Loan Submission Customer with CustomerId: %s", customerID)
 	}
 
-	loadSubmissions := make([]LoanSubmission, 0, len(loadSubmissionsRows))
-	fmt.Sprintf("Size %s", len(loadSubmissionsRows))
-	for _, row := range loadSubmissionsRows {
+	loadSubmissions := make([]LoanSubmission, 0, len(loanCustomerWithAllSubmissionsRow.LoanSubmissions))
+	for _, row := range loanCustomerWithAllSubmissionsRow.LoanSubmissions {
 		loadSubmissions = append(loadSubmissions, LoanSubmission{
 			SubmissionID:            row.SubmissionID,
 			VehicleType:             row.VehicleType,
