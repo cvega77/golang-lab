@@ -132,3 +132,51 @@ func (h *LoanCustomerHandler) HandleGetCustomerAndSubmissionById(w http.Response
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(customerAndSubmissions)
 }
+
+func (h *LoanCustomerHandler) HandlerUpdateCustomerById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Only PATCH method allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	customerID := r.PathValue("customerID")
+	if !IsValidUUID(customerID) {
+		errMsg := "Invalid customer ID: " + customerID
+		responseBodyErr := GetAllLoanCustomersResponse{
+			ErrorMessage: &errMsg,
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(responseBodyErr)
+		return
+	}
+
+	var request LoanCustomer
+	var response UpdateCustomerByCustomerIdResponse
+	errorMessage := ""
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Bad request body", http.StatusBadRequest)
+		return
+	}
+
+	loanCustomerRow := convertLoanCustomer(&request)
+	loanCustomerRow.CustomerID = customerID
+
+	err := h.CustomerStore.UpdateCustomerByCustomerId(loanCustomerRow)
+	if err != nil {
+		fmt.Sprintf("Failed to update customer with CustomerId: %s", customerID)
+		errorMessage = err.Error()
+		response = UpdateCustomerByCustomerIdResponse{
+			ErrorMessage: &errorMessage,
+			Updated:      false,
+		}
+	} else {
+		response = UpdateCustomerByCustomerIdResponse{
+			CustomerID: &customerID,
+			Updated:    true,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

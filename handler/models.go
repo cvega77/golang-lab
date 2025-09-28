@@ -68,6 +68,12 @@ type GetLoanCustomerByIdResponse struct {
 	Data         *CustomerAndSubmissions `json:"data"`
 }
 
+type UpdateCustomerByCustomerIdResponse struct {
+	ErrorMessage *string `json:"error_message"`
+	CustomerID   *string `json:"customer_id"`
+	Updated      bool    `json:"updated"`
+}
+
 func convertLoanCustomer(loanCustomer *LoanCustomer) *datastore.LoanCustomerRow {
 	if loanCustomer == nil {
 		return nil
@@ -116,24 +122,5 @@ func convertLoanProposal(loanProposal *LoanSubmission, customerID string) *datas
 		CreatedAt:            now,
 		UpdatedAt:            now,
 		CustomerID:           customerID,
-	}
-}
-
-func convertLoanSubmission(loanSubmission *LoanSubmission) *datastore.LoanSubmissionRow {
-	if loanSubmission == nil {
-		return nil
-	}
-
-	return &datastore.LoanSubmissionRow{
-		SubmissionID:         loanSubmission.SubmissionID,
-		VehicleType:          loanSubmission.VehicleType,
-		VehicleBrand:         loanSubmission.VehicleBrand,
-		VehicleModel:         loanSubmission.VehicleModel,
-		VehicleLicenseNumber: loanSubmission.VehicleLicenseNumber,
-		VehicleOdometer:      loanSubmission.VehicleOdometer,
-		ManufacturingYear:    loanSubmission.ManufacturingYear,
-		ProposedLoanAmount:   loanSubmission.ProposedLoanAmount,
-		ProposedLoanTenure:   loanSubmission.ProposedLoanTenureMonth,
-		IsCommercialVehicle:  loanSubmission.IsCommercialVehicle,
 	}
 }

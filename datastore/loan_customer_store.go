@@ -68,7 +68,18 @@ select
 from loan_customers customer
 inner join loan_submissions submission
 on customer.customer_id = submission.customer_id
-where customer.customer_id = $1`
+where customer.customer_id = $1;`
+
+const sqlUpdateCustomerByCustomerId = `
+Update loan_customers 
+set full_name = COALESCE($1, full_name),
+birth_date = COALESCE($2, birth_date),
+phone_number = COALESCE($3, phone_number),
+email = COALESCE($4, email),
+monthly_income = COALESCE($5, monthly_income),
+address_street = COALESCE($6, address_street),
+address_city = COALESCE($7, address_city)
+where customer_id = $8;`
 
 type LoanCustomerRow struct {
 	CustomerID    string
@@ -233,4 +244,26 @@ func (s *LoanCustomerStore) GetCustomerByCustomerId(id string) (*LoanCustomerWit
 		LoanCustomerRow: customer,
 		LoanSubmissions: submissions,
 	}, nil
+}
+
+func (s *LoanCustomerStore) UpdateCustomerByCustomerId(customer *LoanCustomerRow) error {
+	fmt.Println(customer)
+	result, err := s.db.Exec(sqlUpdateCustomerByCustomerId, customer.FullName, customer.BirthDate, customer.PhoneNumber,
+		customer.Email, customer.MonthlyIncome, customer.AddressStreet, customer.AddressCity,
+		customer.CustomerID)
+
+	if err != nil {
+		fmt.Println("UpdateCustomerByCustomerId err:", err)
+		return err
+	}
+	rows, err := result.RowsAffected()
+	fmt.Printf("Rows affected = %d", rows)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("no rows affected")
+	}
+	return nil
 }
