@@ -180,3 +180,41 @@ func (h *LoanCustomerHandler) HandlerUpdateCustomerById(w http.ResponseWriter, r
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func (h *LoanCustomerHandler) HandlerDeleteCustomerById(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Only DELETE method allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	customerID := r.PathValue("customerID")
+	var response DeleteCustomerByCustomerIdResponse
+	var errMsg string
+	if !IsValidUUID(customerID) {
+		errMsg = "Invalid customer ID: " + customerID
+		response = DeleteCustomerByCustomerIdResponse{
+			ErrorMessage: &errMsg,
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	err := h.CustomerStore.DeleteCustomerByCustomerId(customerID)
+	if err != nil {
+		fmt.Sprintf("Failed to delete customer with CustomerId: %s", customerID)
+		errMsg = err.Error()
+		response = DeleteCustomerByCustomerIdResponse{
+			ErrorMessage: &errMsg,
+			Deleted:      false,
+		}
+	} else {
+		response = DeleteCustomerByCustomerIdResponse{
+			CustomerID: &customerID,
+			Deleted:    true,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

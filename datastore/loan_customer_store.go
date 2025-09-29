@@ -81,6 +81,11 @@ address_street = COALESCE($6, address_street),
 address_city = COALESCE($7, address_city)
 where customer_id = $8;`
 
+const sqlDeleteCustomerByCostumerId = `
+delete
+from loan_customers
+where customer_id = $1;`
+
 type LoanCustomerRow struct {
 	CustomerID    string
 	IDCardNumber  string
@@ -247,7 +252,6 @@ func (s *LoanCustomerStore) GetCustomerByCustomerId(id string) (*LoanCustomerWit
 }
 
 func (s *LoanCustomerStore) UpdateCustomerByCustomerId(customer *LoanCustomerRow) error {
-	fmt.Println(customer)
 	result, err := s.db.Exec(sqlUpdateCustomerByCustomerId, customer.FullName, customer.BirthDate, customer.PhoneNumber,
 		customer.Email, customer.MonthlyIncome, customer.AddressStreet, customer.AddressCity,
 		customer.CustomerID)
@@ -257,7 +261,24 @@ func (s *LoanCustomerStore) UpdateCustomerByCustomerId(customer *LoanCustomerRow
 		return err
 	}
 	rows, err := result.RowsAffected()
-	fmt.Printf("Rows affected = %d", rows)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("no rows affected")
+	}
+	return nil
+}
+
+func (s *LoanCustomerStore) DeleteCustomerByCustomerId(customerId string) error {
+	result, err := s.db.Exec(sqlDeleteCustomerByCostumerId, customerId)
+
+	if err != nil {
+		fmt.Println("DeleteCustomerByCustomerId err:", err)
+		return err
+	}
+	rows, err := result.RowsAffected()
 	if err != nil {
 		fmt.Printf(err.Error())
 		return err

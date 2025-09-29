@@ -74,6 +74,12 @@ type UpdateCustomerByCustomerIdResponse struct {
 	Updated      bool    `json:"updated"`
 }
 
+type DeleteCustomerByCustomerIdResponse struct {
+	ErrorMessage *string `json:"error_message"`
+	CustomerID   *string `json:"customer_id"`
+	Deleted      bool    `json:"deleted"`
+}
+
 func convertLoanCustomer(loanCustomer *LoanCustomer) *datastore.LoanCustomerRow {
 	if loanCustomer == nil {
 		return nil

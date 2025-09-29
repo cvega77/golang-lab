@@ -37,6 +37,7 @@ func main() {
 	http.HandleFunc("/api/loan/customers", loanCustomerHandler.HandleGetAllLoanSubmission)
 	http.HandleFunc("/api/loan/customers/{customerID}/info", loanCustomerHandler.HandleGetCustomerAndSubmissionById)
 	http.HandleFunc("/api/loan/customer/{customerID}/update", loanCustomerHandler.HandlerUpdateCustomerById)
+	http.HandleFunc("/api/loan/customer/{customerID}/delete", loanCustomerHandler.HandlerDeleteCustomerById)
 
 	log.Println("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
